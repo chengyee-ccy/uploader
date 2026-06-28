@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    body{
+      background:#faf6f0; 
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .header{
+      background:#f5eedf; 
+      color:#4a3b32;
+      padding:24px 20px;
+      border-bottom:1px solid #eae1d1;
+      width:100%;
+    }
+
+    .header-container {
+      max-width:500px;
+      margin:0 auto;
+      width:100%;
+    }
+
+    .header h2{
+      font-family:'Georgia', serif; 
+      font-size:26px;
+      color:#4a3b32; 
+      margin-bottom:8px;
+    }
+
+    .header p{
+      color:#7a6e65;
+      line-height:1.5;
+      font-size:14px;
+      margin-bottom:10px;
+    }
+
+    .header a{
+      color:#8c6f5e;
+      font-size:13px;
+      font-weight:bold;
+      text-decoration:underline;
+    }
+
+    .content{
+      padding:20px;
+      max-width:500px;
+      margin:0 auto;
+      width:100%;
+      flex-grow:1;
+    }
+
+    .drop-zone{
+      border:2px dashed #dcd1c4;
+      border-radius:20px;
+      height:240px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      transition:.25s;
+      background:#fff;
+      box-shadow:0 4px 12px rgba(140, 111, 94, 0.03);
+      padding:20px;
+    }
+
+    .drop-zone.dragover{
+      border-color:#8c6f5e;
+      background:#fdfbf7;
+    }
+
+    .upload-icon{
+      width:64px;
+      height:64px;
+      border-radius:50%;
+      background:#f5eedf; 
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:30px;
+      color:#8c6f5e;
+      margin-bottom:16px;
+    }
+
+    .drop-zone p{
+      font-size:16px;
+      color:#4a3b32;
+      text-align:center;
+    }
+
+    .drop-zone span{
+      color:#8c6f5e;
+      font-weight:bold;
+    }
+
+    .hint{
+      margin-top:10px;
+      color:#b3a79a;
+      font-size:13px;
+    }
+
+    input[type=file]{
+      display:none;
+    }
+
+    .file-list{
+      margin-top:20px;
+      font-size:14px;
+      color:#61554d;
+    }
+
+    .file-title {
+      margin-bottom:8px;
+      display:block;
+    }
+
+    .file-item {
+      display:flex;
+      align-items:center;
+      background:white;
+      padding:10px 14px;
+      border-radius:12px;
+      margin-bottom:8px;
+      box-shadow:0 2px 6px rgba(140, 111, 94, 0.04);
+      border:1px solid #eae1d1;
+    }
+
+    .remove-btn {
+      color:#c94b4b;
+      cursor:pointer;
+      margin-right:12px;
+      font-weight:bold;
+      font-size:14px;
+      user-select:none;
+    }
+
+    .file-name {
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      flex-grow:1;
+    }
+
+    button{
+      width:100%;
+      margin-top:16px;
+      padding:16px;
+      border:none;
+      border-radius:16px;
+      background:#8c6f5e; 
+      color:white;
+      font-size:16px;
+      font-weight:bold;
+      cursor:pointer;
+      transition:.25s;
+      box-shadow:0 4px 10px rgba(140, 111, 94, 0.15);
+    }
+
+    button:hover{
+      background:#765d4f;
+    }
+
+    #resp{
+      display:block;
+      margin-top:20px;
+      color:#5c6e58; 
+      font-size:14px;
+      text-align:center;
+      font-weight:bold;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="header">
+  <div class="header-container">
+    <h2>File Uploader</h2>
+    <p>
+        Upload files directly to our secure Google Drive folder.<br>
+        将文件上传到我们的云端硬盘文件夹
+    </p>
+    <a href="https://drive.google.com/drive/folders/1VhhSEWSnlGv1jG7w6xtksxd-1UFb5DTK?usp=sharing" target="_blank">Click here to view gallery 点击此处浏览相册</a>
+  </div>
+</div>
+
+<div class="content">
+    <form id="uploadForm">
+        <div class="drop-zone" id="dropZone">
+            <div class="upload-icon">⤴</div>
+            <p>
+                Drag your file here or <span>browse</span><br>
+                将文件拖至此处或从文件夹选择
+            </p>
+            <div class="hint">
+                Max file size limit: 50 MB<br>
+                最大文件大小限制：50 MB
+            </div>
+        </div>
+
+        <input type="file" id="myFile" name="myFile" multiple>
+        <div id="fileList" class="file-list"></div>
+        <button type="button" id="submitBtn">Upload 上载</button>
+    </form>
+    <label id="resp"></label>
+</div>
+
+<script>
+const dropZone = document.getElementById("dropZone");
+const input = document.getElementById("myFile");
+const fileList = document.getElementById("fileList");
+
+let selectedFiles = [];
+
+dropZone.onclick = () => input.click();
+
+input.onchange = () => {
+    if (input.files.length > 0) {
+        selectedFiles = [...input.files];
+        syncAndRender();
+    }
+};
+
+function syncAndRender() {
+    const dataTransfer = new DataTransfer();
+    selectedFiles.forEach(file => dataTransfer.items.add(file));
+    input.files = dataTransfer.files;
+
+    if (selectedFiles.length === 0) {
+        fileList.innerHTML = "";
+        return;
+    }
+
+    let html = "<span class='file-title'><b>Selected Files / 已选择的文件:</b></span>";
+    selectedFiles.forEach((file, index) => {
+        html += `
+        <div class="file-item">
+            <span class="remove-btn" onclick="removeFile(${index})">❌</span>
+            <span class="file-name">📄 ${file.name}</span>
+        </div>`;
+    });
+    
+    fileList.innerHTML = html;
+}
+
+function removeFile(index) {
+    selectedFiles.splice(index, 1);
+    syncAndRender();
+}
+
+dropZone.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    dropZone.classList.add("dragover");
+});
+
+dropZone.addEventListener("dragleave", () => {
+    dropZone.classList.remove("dragover");
+});
+
+dropZone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    dropZone.classList.remove("dragover");
+    if (e.dataTransfer.files.length > 0) {
+        selectedFiles = [...e.dataTransfer.files];
+        syncAndRender();
+    }
+});
+
+// SUBMIT EXECUTION VIA NATIVE WEB FETCH (NO GOOGLE SECURITY INTERFERENCE)
+document.getElementById("submitBtn").addEventListener("click", async function() {
+    if (selectedFiles.length == 0) {
+        alert("Please select at least one file. / 请选择至少一个文件。");
+        return;
+    }
+
+    const statusLabel = document.getElementById("resp");
+    statusLabel.style.color = "#4a3b32";
+    statusLabel.innerHTML = "Uploading... / 上传中...";
+
+    // PASTE YOUR NEW GOOGLE APPS SCRIPT WEB APP URL HERE
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbxLmOTjtAo4sxwlAhu_fMeeWnYHikxciGelAq-RKvnZbt7bO-9cyu1D8Zm4kiWJq61ntQ/exec";
+
+    try {
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            statusLabel.innerHTML = `Uploading file ${i+1} of ${selectedFiles.length}...`;
+            
+            const base64Data = await getBase64(file);
+            const cleanBase64 = base64Data.split(',')[1];
+
+            const payload = {
+                name: file.name,
+                type: file.type,
+                base64: cleanBase64
+            };
+
+            const response = await fetch(webAppUrl, {
+                method: "POST",
+                body: JSON.stringify(payload),
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                }
+            });
+
+            const result = await response.json();
+            if (result.status !== "success") throw new Error(result.message);
+        }
+
+        statusLabel.style.color = "#5c6e58";
+        statusLabel.innerHTML = "✅ Uploaded successfully! / 上传成功！";
+        selectedFiles = [];
+        syncAndRender();
+
+    } catch (err) {
+        console.error(err);
+        statusLabel.style.color = "#c94b4b";
+        statusLabel.innerHTML = "❌ Upload failed. Please try again. / 上传失败，请重试。";
+    }
+});
+
+function getBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+</script>
+
+</body>
+</html>
