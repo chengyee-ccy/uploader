@@ -1,345 +1,563 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <style>
-    *{
-      margin:0;
-      padding:0;
-      box-sizing:border-box;
-      font-family:'Helvetica Neue', Helvetica, Arial, sans-serif;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     }
 
-    body{
-      background:#faf6f0; 
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
+    body {
+      background: #faf6f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
-    .header{
-      background:#f5eedf; 
-      color:#4a3b32;
-      padding:24px 20px;
-      border-bottom:1px solid #eae1d1;
-      width:100%;
+    .header {
+      background: #f5eedf;
+      color: #4a3b32;
+      padding: 24px 20px;
+      border-bottom: 1px solid #eae1d1;
+      width: 100%;
     }
 
     .header-container {
-      max-width:500px;
-      margin:0 auto;
-      width:100%;
+      max-width: 550px;
+      margin: 0 auto;
+      width: 100%;
     }
 
-    .header h2{
-      font-family:'Georgia', serif; 
-      font-size:26px;
-      color:#4a3b32; 
-      margin-bottom:8px;
+    .header h2 {
+      font-family: 'Georgia', serif;
+      font-size: 26px;
+      color: #4a3b32;
+      margin-bottom: 8px;
     }
 
-    .header p{
-      color:#7a6e65;
-      line-height:1.5;
-      font-size:14px;
-      margin-bottom:10px;
+    .header p {
+      color: #7a6e65;
+      line-height: 1.5;
+      font-size: 14px;
+      margin-bottom: 10px;
     }
 
-    .header a{
-      color:#8c6f5e;
-      font-size:13px;
-      font-weight:bold;
-      text-decoration:underline;
+    .content {
+      padding: 20px;
+      max-width: 550px;
+      margin: 0 auto;
+      width: 100%;
+      flex-grow: 1;
     }
 
-    .content{
-      padding:20px;
-      max-width:500px;
-      margin:0 auto;
-      width:100%;
-      flex-grow:1;
+    .drop-zone {
+      border: 2px dashed #cfc4b4;
+      border-radius: 28px;
+      height: 150px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: .25s;
+      background: #fbf7ee;
+      padding: 20px;
+      margin-bottom: 20px;
     }
 
-    .drop-zone{
-      border:2px dashed #dcd1c4;
-      border-radius:20px;
-      height:240px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      transition:.25s;
-      background:#fff;
-      box-shadow:0 4px 12px rgba(140, 111, 94, 0.03);
-      padding:20px;
+    .drop-zone.dragover {
+      border-color: #8c6f5e;
+      background: #f5eedf;
     }
 
-    .drop-zone.dragover{
-      border-color:#8c6f5e;
-      background:#fdfbf7;
+    .upload-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #f2dfab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8c6f5e;
+      margin-bottom: 10px;
     }
 
-    .upload-icon{
-      width:64px;
-      height:64px;
-      border-radius:50%;
-      background:#f5eedf; 
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:30px;
-      color:#8c6f5e;
-      margin-bottom:16px;
+    .drop-zone p {
+      font-size: 16px;
+      font-weight: 700;
+      color: #8c6f5e;
     }
 
-    .drop-zone p{
-      font-size:16px;
-      color:#4a3b32;
-      text-align:center;
+    .hint {
+      margin-top: 4px;
+      color: #9c8e7f;
+      font-size: 12px;
     }
 
-    .drop-zone span{
-      color:#8c6f5e;
-      font-weight:bold;
+    input[type=file] {
+      display: none;
     }
 
-    .hint{
-      margin-top:10px;
-      color:#b3a79a;
-      font-size:13px;
+    .file-grid-container {
+      margin-top: 15px;
+      display: none;
     }
 
-    input[type=file]{
-      display:none;
+    .grid-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4a3b32;
+      margin-bottom: 12px;
+      display: block;
     }
 
-    .file-list{
-      margin-top:20px;
-      font-size:14px;
-      color:#61554d;
+    .file-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
     }
 
-    .file-title {
-      margin-bottom:8px;
-      display:block;
+    .drive-card {
+      background: #e9eef6;
+      border-radius: 16px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #dce3ed;
     }
 
-    .file-item {
-      display:flex;
-      align-items:center;
-      background:white;
-      padding:10px 14px;
-      border-radius:12px;
-      margin-bottom:8px;
-      box-shadow:0 2px 6px rgba(140, 111, 94, 0.04);
-      border:1px solid #eae1d1;
+    .drive-card-header {
+      display: flex;
+      align-items: center;
+      padding: 4px 4px 8px 4px;
     }
 
-    .remove-btn {
-      color:#c94b4b;
-      cursor:pointer;
-      margin-right:12px;
-      font-weight:bold;
-      font-size:14px;
-      user-select:none;
+    .drive-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f1f1f;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-grow: 1;
     }
 
-    .file-name {
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      flex-grow:1;
+    .drive-card-remove {
+      cursor: pointer;
+      color: #5f6368;
+      font-weight: bold;
+      font-size: 14px;
+      padding: 0 4px;
     }
 
-    button{
-      width:100%;
-      margin-top:16px;
-      padding:16px;
-      border:none;
-      border-radius:16px;
-      background:#8c6f5e; 
-      color:white;
-      font-size:16px;
-      font-weight:bold;
-      cursor:pointer;
-      transition:.25s;
-      box-shadow:0 4px 10px rgba(140, 111, 94, 0.15);
+    .drive-card-body {
+      background: #ffffff;
+      border-radius: 12px;
+      height: 120px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    button:hover{
-      background:#765d4f;
+    .drive-card-body img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
-    #resp{
-      display:block;
-      margin-top:20px;
-      color:#5c6e58; 
-      font-size:14px;
-      text-align:center;
-      font-weight:bold;
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 16px;
+      border: none;
+      border-radius: 16px;
+      background: #8c6f5e;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: .25s;
+    }
+
+    button:hover {
+      background: #765d4f;
+    }
+
+    .progress-container {
+      width: 100%;
+      background: #eae1d1;
+      height: 12px;
+      border-radius: 20px;
+      margin-top: 20px;
+      overflow: hidden;
+      display: none;
+      border: 1px solid #dcd1c4;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #8c6f5e;
+      border-radius: 20px;
+      transition: width 0.4s ease-out;
+    }
+
+    #resp {
+      display: block;
+      margin-top: 12px;
+      color: #5c6e58;
+      font-size: 14px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    /* LIVE GALLERY VIEWPORT Framework (image_33eee2.jpg) */
+    .gallery-section {
+      margin-top: 35px;
+      width: 100%;
+    }
+
+    .gallery-title {
+      font-family: 'Georgia', serif;
+      color: #4a3b32;
+      font-size: 22px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .live-gallery-viewport {
+      background: #ffffff;
+      border-radius: 28px;
+      border: 1px solid #eae1d1;
+      height: 480px;
+      padding: 24px;
+      overflow-y: scroll;
+      box-shadow: 0 4px 20px rgba(140, 111, 94, 0.04);
+    }
+
+    .live-gallery-viewport::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .live-gallery-viewport::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .live-gallery-viewport::-webkit-scrollbar-thumb {
+      background: #aaaaaa;
+      border-radius: 10px;
+      border: 2px solid #ffffff;
+    }
+
+    .live-gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 28px;
+    }
+
+    .gallery-item-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* Clickable Link Wrap Styling */
+    .gallery-card-link {
+      width: 100%;
+      text-decoration: none;
+      display: block;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    .gallery-card-link:hover {
+      transform: scale(1.02);
+      opacity: 0.95;
+    }
+
+    .gallery-media-canvas {
+      width: 100%;
+      height: 170px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #faf8f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      margin-bottom: 10px;
+      position: relative;
+    }
+
+    .gallery-media-canvas img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Custom video overlay design since clicking it now opens the link instead of pausing */
+    .video-thumbnail-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: #000000;
+    }
+
+    .video-thumbnail-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.75;
+    }
+
+    .video-play-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.85);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e0533c;
+      font-size: 18px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .gallery-media-label {
+      font-size: 14px;
+      color: #888888;
+      text-align: center;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      width: 100%;
+      padding: 0 4px;
+    }
+
+    .gallery-empty-state {
+      grid-column: span 2;
+      text-align: center;
+      color: #9c8e7f;
+      padding-top: 180px;
+      font-size: 14px;
     }
   </style>
 </head>
 
 <body>
-
-<div class="header">
+  <!--div class="header">
   <div class="header-container">
-    <h2>File Uploader</h2>
-    <p>
-        Upload files directly to our secure Google Drive folder.<br>
-        将文件上传到我们的云端硬盘文件夹
-    </p>
-    <a href="https://drive.google.com/drive/folders/1VhhSEWSnlGv1jG7w6xtksxd-1UFb5DTK?usp=sharing" target="_blank">Click here to view gallery 点击此处浏览相册</a>
+    <h2>Media Uploader</h2>
+    <p>Upload photos and videos directly to our Google Drive folder.</p>
   </div>
-</div>
+</div-->
 
-<div class="content">
+  <div class="content">
     <form id="uploadForm">
-        <div class="drop-zone" id="dropZone">
-            <div class="upload-icon">⤴</div>
-            <p>
-                Drag your file here or <span>browse</span><br>
-                将文件拖至此处或从文件夹选择
-            </p>
-            <div class="hint">
-                Max file size limit: 50 MB<br>
-                最大文件大小限制：50 MB
-            </div>
+      <div class="drop-zone" id="dropZone">
+        <div class="upload-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+            <path
+              d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
+          </svg>
         </div>
-
-        <input type="file" id="myFile" name="myFile" multiple>
-        <div id="fileList" class="file-list"></div>
-        <button type="button" id="submitBtn">Upload 上载</button>
+        <p>Upload Photo or Video</p>
+        <p>上传照片或视频</p>
+        <div class="hint">Accepts Images & Videos (Max 30MB)</div>
+        <div class="hint">支持图片和视频（最大 30MB）</div>
+      </div>
+      <input type="file" id="myFile" name="myFile" accept="image/*, video/*" multiple>
+      <div id="fileGridContainer" class="file-grid-container">
+        <span class="grid-title">Queue Processing Matrix / 待上传队列:</span>
+        <div id="fileGrid" class="file-grid"></div>
+      </div>
+      <button type="button" id="submitBtn">Upload 上载</button>
     </form>
+
+    <div class="progress-container" id="progressContainer">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
     <label id="resp"></label>
-</div>
 
-<script>
-const dropZone = document.getElementById("dropZone");
-const input = document.getElementById("myFile");
-const fileList = document.getElementById("fileList");
+    <div class="gallery-section">
+      <h3 class="gallery-title">Live Gallery / 相册</h3>
+      <div class="live-gallery-viewport">
+        <div id="liveGalleryGrid" class="live-gallery-grid"></div>
+      </div>
+    </div>
+  </div>
 
-let selectedFiles = [];
-
-dropZone.onclick = () => input.click();
-
-input.onchange = () => {
-    if (input.files.length > 0) {
-        selectedFiles = [...input.files];
-        syncAndRender();
-    }
-};
-
-function syncAndRender() {
-    const dataTransfer = new DataTransfer();
-    selectedFiles.forEach(file => dataTransfer.items.add(file));
-    input.files = dataTransfer.files;
-
-    if (selectedFiles.length === 0) {
-        fileList.innerHTML = "";
-        return;
-    }
-
-    let html = "<span class='file-title'><b>Selected Files / 已选择的文件:</b></span>";
-    selectedFiles.forEach((file, index) => {
-        html += `
-        <div class="file-item">
-            <span class="remove-btn" onclick="removeFile(${index})">❌</span>
-            <span class="file-name">📄 ${file.name}</span>
-        </div>`;
-    });
-    
-    fileList.innerHTML = html;
-}
-
-function removeFile(index) {
-    selectedFiles.splice(index, 1);
-    syncAndRender();
-}
-
-dropZone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dropZone.classList.add("dragover");
-});
-
-dropZone.addEventListener("dragleave", () => {
-    dropZone.classList.remove("dragover");
-});
-
-dropZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dropZone.classList.remove("dragover");
-    if (e.dataTransfer.files.length > 0) {
-        selectedFiles = [...e.dataTransfer.files];
-        syncAndRender();
-    }
-});
-
-// SUBMIT EXECUTION VIA NATIVE WEB FETCH (NO GOOGLE SECURITY INTERFERENCE)
-document.getElementById("submitBtn").addEventListener("click", async function() {
-    if (selectedFiles.length == 0) {
-        alert("Please select at least one file. / 请选择至少一个文件。");
-        return;
-    }
-
+  <script>
+    const dropZone = document.getElementById("dropZone");
+    const input = document.getElementById("myFile");
+    const fileGridContainer = document.getElementById("fileGridContainer");
+    const fileGrid = document.getElementById("fileGrid");
+    const progressContainer = document.getElementById("progressContainer");
+    const progressBar = document.getElementById("progressBar");
     const statusLabel = document.getElementById("resp");
-    statusLabel.style.color = "#4a3b32";
-    statusLabel.innerHTML = "Uploading... / 上传中...";
+    const liveGalleryGrid = document.getElementById("liveGalleryGrid");
 
-    // PASTE YOUR NEW GOOGLE APPS SCRIPT WEB APP URL HERE
-    const webAppUrl = "https://script.google.com/macros/s/AKfycbwi3O3bfPqElaJkz3P49gYulVmewrTg_rCBt1Mfs4EN2FF78MplXu452CTd_41iro4c/exec";
+    // IMPORTANT: Insert your generated Google Script deployment link here
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbyT1SIs15u_uIWHJzB9U2qnUZXXr_f_AFL4KehEKxxCliOeGapu9iZpKg-Wi7plaiYL/exec";
+    let selectedFiles = [];
 
-    try {
-        for (let i = 0; i < selectedFiles.length; i++) {
-            const file = selectedFiles[i];
-            statusLabel.innerHTML = `Uploading file ${i+1} of ${selectedFiles.length}...`;
-            
-            const base64Data = await getBase64(file);
-            const cleanBase64 = base64Data.split(',')[1];
+    window.addEventListener("DOMContentLoaded", () => {
+      fetchLiveCloudGallery();
+    });
 
-            const payload = {
-                name: file.name,
-                type: file.type,
-                base64: cleanBase64
-            };
+    dropZone.onclick = () => input.click();
+    input.onchange = () => { if (input.files.length > 0) { selectedFiles = [...selectedFiles, ...input.files]; syncAndRender(); } };
 
-            const response = await fetch(webAppUrl, {
-                method: "POST",
-                body: JSON.stringify(payload),
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8"
-                }
-            });
+    function syncAndRender() {
+      const dataTransfer = new DataTransfer();
+      selectedFiles.forEach(file => dataTransfer.items.add(file));
+      input.files = dataTransfer.files;
+      if (selectedFiles.length === 0) { fileGridContainer.style.display = "none"; fileGrid.innerHTML = ""; return; }
+      fileGridContainer.style.display = "block";
+      let html = "";
+      selectedFiles.forEach((file, index) => {
+        const isVideo = file.type.startsWith('video/');
+        const localThumbnailUrl = isVideo ? "" : URL.createObjectURL(file);
+        html += `
+        <div class="drive-card">
+            <div class="drive-card-header">
+                <span class="drive-card-title">${file.name}</span>
+                <span class="drive-card-remove" onclick="removeFile(${index})">&times;</span>
+            </div>
+            <div class="drive-card-body">
+                ${isVideo ? `<div style="font-size:30px;">🎬</div>` : `<img src="${localThumbnailUrl}" onload="URL.revokeObjectURL('${localThumbnailUrl}')">`}
+            </div>
+        </div>`;
+      });
+      fileGrid.innerHTML = html;
+    }
 
-            const result = await response.json();
-            if (result.status !== "success") throw new Error(result.message);
+    function removeFile(index) { selectedFiles.splice(index, 1); syncAndRender(); }
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
+    dropZone.addEventListener("dragleave", () => { dropZone.classList.remove("dragover"); });
+    dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove("dragover"); if (e.dataTransfer.files.length > 0) { selectedFiles = [...selectedFiles, ...e.dataTransfer.files]; syncAndRender(); } });
+
+    // DYNAMIC ENGINE RENDERING CLICKABLE COVERS
+    function buildLiveGallery(items) {
+      if (!items || items.length === 0) {
+        liveGalleryGrid.innerHTML = `<div class="gallery-empty-state">No media uploaded yet. / 暂无相册媒体。</div>`;
+        return;
+      }
+      let html = "";
+      items.forEach(file => {
+        // Generates the exact destination format matching your link requirement
+        const targetDriveViewUrl = `https://drive.google.com/file/d/${file.id}/view`;
+
+        html += `
+        <div class="gallery-item-node">
+            <!-- Wrapped inside an external redirect wrapper anchor -->
+            <a href="${targetDriveViewUrl}" target="_blank" class="gallery-card-link" title="Click to view file on Google Drive">
+                <div class="gallery-media-canvas">
+                    ${file.type === "video" ? `
+                        <div class="video-thumbnail-container">
+                            <video src="${file.url}#t=0.5" preload="metadata"></video>
+                            <div class="video-play-overlay">▶</div>
+                        </div>
+                    ` : `
+                        <img src="${file.url}" loading="lazy">
+                    `}
+                </div>
+            </a>
+            <div class="gallery-media-label">${file.name}</div>
+        </div>`;
+      });
+      liveGalleryGrid.innerHTML = html;
+    }
+
+    async function fetchLiveCloudGallery() {
+      try {
+        const response = await fetch(`${webAppUrl}?action=getGalleryFiles`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.files) buildLiveGallery(data.files);
+        }
+      } catch (err) {
+        console.error("Gallery Sync Failure:", err);
+      }
+    }
+
+    document.getElementById("submitBtn").addEventListener("click", async function () {
+      if (selectedFiles.length == 0) { alert("Please select at least one file."); return; }
+      if (window.location.protocol === 'file:') {
+        alert("Security Alert: Please run this code using an active local server environment (like VS Code Live Server) instead of opening the local HTML file directly via double-click.");
+        return;
+      }
+
+      statusLabel.style.color = "#4a3b32";
+      statusLabel.innerHTML = "Uploading... / 正在上传...";
+      progressContainer.style.display = "block";
+      progressBar.style.width = "0%";
+
+      const totalFiles = selectedFiles.length;
+      let progressInterval;
+
+      try {
+        for (let i = 0; i < totalFiles; i++) {
+          const file = selectedFiles[i];
+          const base64Data = await getBase64(file);
+          const cleanBase64 = base64Data.split(',')[1];
+          const payload = { name: file.name, type: file.type, base64: cleanBase64 };
+
+          let filePercent = 0;
+          progressInterval = setInterval(() => {
+            if (filePercent < 90) {
+              filePercent += Math.floor(Math.random() * 5) + 1;
+              if (filePercent > 90) filePercent = 90;
+              const overallPercent = ((i + (filePercent / 100)) / totalFiles) * 100;
+              progressBar.style.width = `${overallPercent}%`;
+              statusLabel.innerHTML = `Uploading file ${i + 1} of ${totalFiles} (${filePercent}%)...`;
+            }
+          }, 150);
+
+          const response = await fetch(webAppUrl, { method: "POST", body: JSON.stringify(payload) });
+          clearInterval(progressInterval);
+
+          if (!response.ok) throw new Error(`HTTP Endpoint connection failure: ${response.status}`);
+          const result = await response.json();
+          if (result.status !== "success") throw new Error(result.message);
+
+          progressBar.style.width = `${((i + 1) / totalFiles) * 100}%`;
         }
 
-        statusLabel.style.color = "#5c6e58";
-        statusLabel.innerHTML = "✅ Uploaded successfully! / 上传成功！";
+        statusLabel.style.color = "#8c6f5e";
+        statusLabel.innerHTML = "Synchronizing live albums... / 正在更新同步...";
         selectedFiles = [];
         syncAndRender();
 
-    } catch (err) {
+        setTimeout(async () => {
+          await fetchLiveCloudGallery();
+          statusLabel.style.color = "#5c6e58";
+          statusLabel.innerHTML = "✅ Gallery updated successfully! / 上传并同步成功！";
+          setTimeout(() => { progressContainer.style.display = "none"; }, 1500);
+        }, 1000);
+
+      } catch (err) {
+        if (progressInterval) clearInterval(progressInterval);
         console.error(err);
         statusLabel.style.color = "#c94b4b";
-        statusLabel.innerHTML = "❌ Upload failed. Please try again. / 上传失败，请重试。";
-    }
-});
-
-function getBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
+        statusLabel.innerHTML = `❌ Error: ${err.message || "Upload configuration broken."}`;
+        progressBar.style.backgroundColor = "#c94b4b";
+      }
     });
-}
-</script>
 
+    function getBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); }); }
+  </script>
 </body>
+
 </html>
