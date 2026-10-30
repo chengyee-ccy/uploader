@@ -2,6 +2,7 @@
 <html>
 
 <head>
+  <meta charset="UTF-8">
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
@@ -118,7 +119,7 @@
 
     .file-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
     }
 
@@ -138,6 +139,7 @@
     }
 
     .drive-card-title {
+      min-width: 0;
       font-size: 13px;
       font-weight: 600;
       color: #1f1f1f;
@@ -231,33 +233,64 @@
       text-align: center;
     }
 
+    .gallery-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .gallery-refresh-status {
+      color: #8c6f5e;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .gallery-refresh-status.is-error {
+      color: #c94b4b;
+    }
+
+    .gallery-status {
+      min-width: 0;
+    }
+
+    .gallery-last-updated:not([hidden]) {
+      display: block;
+      margin-top: 4px;
+      color: #9c8e7f;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .gallery-refresh-button {
+      width: auto;
+      min-height: 44px;
+      flex-shrink: 0;
+      margin: 0;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .gallery-refresh-button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
     .live-gallery-viewport {
       background: #ffffff;
       border-radius: 28px;
       border: 1px solid #eae1d1;
-      height: 480px;
+      width: 100%;
       padding: 24px;
-      overflow-y: scroll;
+      overflow: hidden;
       box-shadow: 0 4px 20px rgba(140, 111, 94, 0.04);
-    }
-
-    .live-gallery-viewport::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    .live-gallery-viewport::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .live-gallery-viewport::-webkit-scrollbar-thumb {
-      background: #aaaaaa;
-      border-radius: 10px;
-      border: 2px solid #ffffff;
     }
 
     .live-gallery-grid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 28px;
     }
 
@@ -265,6 +298,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      min-width: 0;
       width: 100%;
     }
 
@@ -372,12 +406,13 @@
               d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z" />
           </svg>
         </div>
-        <p>Upload Photo or Video</p>
-        <p>上传照片或视频</p>
-        <div class="hint">Accepts Images & Videos (Max 30MB)</div>
-        <div class="hint">支持图片和视频（最大 30MB）</div>
+        <p>Choose Photo or Video</p>
+        <p>选择照片或视频</p>
+        <div class="hint">Select from Files (Max 30MB)</div>
+        <div class="hint">从文件中选择（最大 30MB）</div>
       </div>
-      <input type="file" id="myFile" name="myFile" accept="image/*, video/*" multiple>
+      <!-- A generic MIME type avoids Android Chrome's camera shortcuts. Validate media after selection. -->
+      <input type="file" id="myFile" name="myFile" accept="application/octet-stream" multiple>
       <div id="fileGridContainer" class="file-grid-container">
         <span class="grid-title">Queue Processing Matrix / 待上传队列:</span>
         <div id="fileGrid" class="file-grid"></div>
@@ -392,7 +427,14 @@
 
     <div class="gallery-section">
       <h3 class="gallery-title">Live Gallery / 相册</h3>
-      <div class="live-gallery-viewport">
+      <div class="gallery-toolbar">
+        <div class="gallery-status">
+          <p id="galleryRefreshStatus" class="gallery-refresh-status" role="status" aria-atomic="true">Loading gallery... / 正在加载相册...</p>
+          <time id="galleryLastUpdated" class="gallery-last-updated" hidden></time>
+        </div>
+        <button type="button" id="refreshGalleryBtn" class="gallery-refresh-button" aria-controls="liveGalleryGrid">Refresh / 刷新</button>
+      </div>
+      <div id="liveGalleryViewport" class="live-gallery-viewport" tabindex="0" aria-label="Live Gallery / 相册" aria-busy="false">
         <div id="liveGalleryGrid" class="live-gallery-grid"></div>
       </div>
     </div>
@@ -407,6 +449,11 @@
     const progressBar = document.getElementById("progressBar");
     const statusLabel = document.getElementById("resp");
     const liveGalleryGrid = document.getElementById("liveGalleryGrid");
+    const galleryViewport = document.getElementById("liveGalleryViewport");
+    const galleryRefreshButton = document.getElementById("refreshGalleryBtn");
+    const galleryRefreshStatus = document.getElementById("galleryRefreshStatus");
+    const galleryLastUpdated = document.getElementById("galleryLastUpdated");
+    let galleryRequest = null;
 
     // IMPORTANT: Insert your generated Google Script deployment link here
     const webAppUrl = "https://script.google.com/macros/s/AKfycbyT1SIs15u_uIWHJzB9U2qnUZXXr_f_AFL4KehEKxxCliOeGapu9iZpKg-Wi7plaiYL/exec";
@@ -416,8 +463,32 @@
       fetchLiveCloudGallery();
     });
 
+    galleryRefreshButton.addEventListener("click", () => fetchLiveCloudGallery());
+
     dropZone.onclick = () => input.click();
-    input.onchange = () => { if (input.files.length > 0) { selectedFiles = [...selectedFiles, ...input.files]; syncAndRender(); } };
+    input.onchange = () => { if (input.files.length > 0) addSelectedFiles(input.files); };
+
+    function getMediaType(file) {
+      if (file.type.startsWith("image/")) return "image";
+      if (file.type.startsWith("video/")) return "video";
+      if (file.type && file.type !== "application/octet-stream") return null;
+      if (/\.(avif|bmp|gif|heic|heif|ico|jfif|jpe?g|png|svg|tiff?|webp)$/i.test(file.name)) return "image";
+      if (/\.(3g2|3gp|avi|m4v|mkv|mov|mp4|mpe?g|ogv|webm|wmv)$/i.test(file.name)) return "video";
+      return null;
+    }
+
+    function addSelectedFiles(files) {
+      const incomingFiles = Array.from(files);
+      const mediaFiles = incomingFiles.filter(file => getMediaType(file));
+      selectedFiles = [...selectedFiles, ...mediaFiles];
+      syncAndRender();
+      if (mediaFiles.length !== incomingFiles.length) {
+        statusLabel.style.color = "#c94b4b";
+        statusLabel.textContent = "Please select only photo or video files. / 请仅选择照片或视频文件。";
+      } else {
+        statusLabel.textContent = "";
+      }
+    }
 
     function syncAndRender() {
       const dataTransfer = new DataTransfer();
@@ -427,7 +498,7 @@
       fileGridContainer.style.display = "block";
       let html = "";
       selectedFiles.forEach((file, index) => {
-        const isVideo = file.type.startsWith('video/');
+        const isVideo = getMediaType(file) === "video";
         const localThumbnailUrl = isVideo ? "" : URL.createObjectURL(file);
         html += `
         <div class="drive-card">
@@ -436,7 +507,7 @@
                 <span class="drive-card-remove" onclick="removeFile(${index})">&times;</span>
             </div>
             <div class="drive-card-body">
-                ${isVideo ? `<div style="font-size:30px;">🎬</div>` : `<img src="${localThumbnailUrl}" onload="URL.revokeObjectURL('${localThumbnailUrl}')">`}
+                ${isVideo ? `<div style="font-size:30px;">🎬</div>` : `<img src="${localThumbnailUrl}" onload="window.URL.revokeObjectURL('${localThumbnailUrl}')">`}
             </div>
         </div>`;
       });
@@ -446,7 +517,7 @@
     function removeFile(index) { selectedFiles.splice(index, 1); syncAndRender(); }
     dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
     dropZone.addEventListener("dragleave", () => { dropZone.classList.remove("dragover"); });
-    dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove("dragover"); if (e.dataTransfer.files.length > 0) { selectedFiles = [...selectedFiles, ...e.dataTransfer.files]; syncAndRender(); } });
+    dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove("dragover"); if (e.dataTransfer.files.length > 0) addSelectedFiles(e.dataTransfer.files); });
 
     // DYNAMIC ENGINE RENDERING CLICKABLE COVERS
     function buildLiveGallery(items) {
@@ -480,20 +551,49 @@
       liveGalleryGrid.innerHTML = html;
     }
 
-    async function fetchLiveCloudGallery() {
-      try {
-        const response = await fetch(`${webAppUrl}?action=getGalleryFiles`);
-        if (response.ok) {
+    function fetchLiveCloudGallery() {
+      if (galleryRequest) return galleryRequest;
+      galleryRefreshButton.disabled = true;
+      galleryViewport.setAttribute("aria-busy", "true");
+      galleryRefreshStatus.classList.remove("is-error");
+      galleryRefreshStatus.textContent = "Refreshing gallery... / 正在刷新相册...";
+
+      galleryRequest = (async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000);
+        try {
+          const response = await fetch(`${webAppUrl}?action=getGalleryFiles`, {
+            cache: "no-store", signal: controller.signal
+          });
+          if (!response.ok) throw new Error(`Gallery request failed: ${response.status}`);
           const data = await response.json();
-          if (data && data.files) buildLiveGallery(data.files);
+          if (!Array.isArray(data?.files)) throw new Error("Invalid gallery response");
+          buildLiveGallery(data.files);
+          galleryRefreshStatus.textContent = "Gallery updated / 相册已更新";
+          const updatedAt = new Date();
+          galleryLastUpdated.dateTime = updatedAt.toISOString();
+          galleryLastUpdated.textContent = `Last updated / 更新时间: ${updatedAt.toLocaleString("en-GB", {
+            dateStyle: "medium", timeStyle: "medium", timeZone: "Asia/Kuala_Lumpur"
+          })} MYT`;
+          galleryLastUpdated.hidden = false;
+          return true;
+        } catch (err) {
+          console.error("Gallery Sync Failure:", err);
+          galleryRefreshStatus.classList.add("is-error");
+          galleryRefreshStatus.textContent = "Couldn't refresh. Please try again. / 刷新失败，请重试。";
+          return false;
+        } finally {
+          clearTimeout(timeout);
+          galleryRequest = null;
+          galleryRefreshButton.disabled = false;
+          galleryViewport.setAttribute("aria-busy", "false");
         }
-      } catch (err) {
-        console.error("Gallery Sync Failure:", err);
-      }
+      })();
+      return galleryRequest;
     }
 
     document.getElementById("submitBtn").addEventListener("click", async function () {
-      if (selectedFiles.length == 0) { alert("Please select at least one file."); return; }
+      if (selectedFiles.length == 0) { alert("Please select at least one file.\n 请选择至少一个文件。"); return; }
       if (window.location.protocol === 'file:') {
         alert("Security Alert: Please run this code using an active local server environment (like VS Code Live Server) instead of opening the local HTML file directly via double-click.");
         return;
@@ -541,9 +641,11 @@
         syncAndRender();
 
         setTimeout(async () => {
-          await fetchLiveCloudGallery();
+          const galleryUpdated = await fetchLiveCloudGallery();
           statusLabel.style.color = "#5c6e58";
-          statusLabel.innerHTML = "✅ Gallery updated successfully! / 上传并同步成功！";
+          statusLabel.textContent = galleryUpdated
+            ? "✅ Gallery updated successfully! / 上传并同步成功！"
+            : "✅ Uploaded successfully. Refresh the gallery to see your files. / 上传成功，请刷新相册查看。";
           setTimeout(() => { progressContainer.style.display = "none"; }, 1500);
         }, 1000);
 
