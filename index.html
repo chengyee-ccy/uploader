@@ -581,8 +581,8 @@
         <div class="hint">Select from Files (Max 30MB)</div>
         <div class="hint">从文件中选择（最大 30MB）</div>
       </div>
-      <!-- A generic MIME type avoids Android Chrome's camera shortcuts. Validate media after selection. -->
-      <input type="file" id="myFile" name="myFile" accept="application/octet-stream" multiple>
+      <!-- Leave file types unrestricted so the picker defaults to All Files. Validate media after selection. -->
+      <input type="file" id="myFile" name="myFile" multiple>
       <div id="fileGridContainer" class="file-grid-container">
         <span class="grid-title">Queue Processing Matrix / 待上传队列:</span>
         <div id="fileGrid" class="file-grid"></div>
@@ -597,7 +597,6 @@
 
     <div class="gallery-section">
       <h3 class="gallery-title">Live Gallery / 相册</h3>
-      <p class="gallery-help">Double-click or double-tap a photo to send love. Tap its filename to view.<br>双击照片送上爱心，点击文件名查看原图。</p>
       <p id="galleryLikeStatus" class="gallery-like-status" role="status" hidden></p>
       <div class="gallery-toolbar">
         <div class="gallery-status">
