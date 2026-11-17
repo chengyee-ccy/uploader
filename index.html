@@ -5,6 +5,10 @@
   <meta charset="UTF-8">
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script defer src="photo-likes.js"></script>
   <style>
     * {
       margin: 0;
@@ -191,6 +195,61 @@
       background: #765d4f;
     }
 
+    button:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+
+    .upload-error-dialog {
+      width: min(420px, calc(100% - 32px));
+      max-height: calc(100% - 32px);
+      overflow-y: auto;
+      margin: auto;
+      padding: 28px;
+      border: 1px solid #eae1d1;
+      border-radius: 24px;
+      background: #fbf7ee;
+      color: #4a3b32;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(74, 59, 50, 0.2);
+    }
+
+    .upload-error-dialog::backdrop {
+      background: rgba(74, 59, 50, 0.4);
+    }
+
+    .upload-error-dialog h2 {
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .upload-error-dialog p {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #7a6e65;
+      overflow-wrap: anywhere;
+    }
+
+    .upload-error-dialog a {
+      color: #8c6f5e;
+      font-weight: 600;
+    }
+
+    .upload-error-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .upload-error-actions button {
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    #dismissUploadError {
+      background: #eee5d7;
+      color: #4a3b32;
+    }
+
     .progress-container {
       width: 100%;
       background: #eae1d1;
@@ -231,6 +290,19 @@
       font-size: 22px;
       margin-bottom: 16px;
       text-align: center;
+    }
+
+    .gallery-help,
+    .gallery-like-status {
+      margin: -4px 0 16px;
+      color: #8c6f5e;
+      font-size: 12px;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    .gallery-like-status {
+      color: #c94b4b;
     }
 
     .gallery-toolbar {
@@ -335,6 +407,40 @@
       object-fit: cover;
     }
 
+    .gallery-photo {
+      cursor: pointer;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .gallery-love-burst {
+      position: absolute;
+      color: #e25570;
+      font-size: 76px;
+      line-height: 1;
+      opacity: 0;
+      pointer-events: none;
+      text-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    .gallery-photo.is-loving .gallery-love-burst {
+      animation: photo-love 750ms ease-out both;
+    }
+
+    @keyframes photo-love {
+      0% { opacity: 0; transform: scale(0.4); }
+      25% { opacity: 1; transform: scale(1.15); }
+      55% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.3); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .gallery-photo.is-loving .gallery-love-burst {
+        animation-duration: 150ms;
+      }
+    }
+
     /* Custom video overlay design since clicking it now opens the link instead of pausing */
     .video-thumbnail-container {
       width: 100%;
@@ -367,7 +473,17 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     }
 
+    .gallery-media-caption {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      min-width: 0;
+    }
+
     .gallery-media-label {
+      flex: 1;
+      min-width: 0;
       font-size: 14px;
       color: #888888;
       text-align: center;
@@ -375,8 +491,62 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      width: 100%;
       padding: 0 4px;
+      text-decoration: none;
+    }
+
+    .gallery-media-label:hover {
+      text-decoration: underline;
+    }
+
+    .gallery-like-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      flex-shrink: 0;
+      width: auto;
+      min-width: 44px;
+      min-height: 44px;
+      margin: -7px -4px -7px 0;
+      padding: 4px;
+      border-radius: 12px;
+      background: transparent;
+      color: #9c8e7f;
+      font-size: 13px;
+      font-weight: 500;
+      touch-action: manipulation;
+    }
+
+    .gallery-like-icon {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+    }
+
+    .gallery-like-button[aria-pressed="true"] {
+      color: #d84d68;
+    }
+
+    .gallery-like-button[aria-pressed="true"] .gallery-like-icon {
+      fill: currentColor;
+    }
+
+    .gallery-like-button:hover {
+      background: #fff0f2;
+      color: #d84d68;
+    }
+
+    .gallery-like-button:focus-visible {
+      outline: 2px solid #d84d68;
+      outline-offset: 2px;
+    }
+
+    .gallery-like-button:disabled {
+      cursor: wait;
+      opacity: 0.6;
     }
 
     .gallery-empty-state {
@@ -417,7 +587,7 @@
         <span class="grid-title">Queue Processing Matrix / 待上传队列:</span>
         <div id="fileGrid" class="file-grid"></div>
       </div>
-      <button type="button" id="submitBtn">Upload 上载</button>
+      <button type="button" id="submitBtn" hidden>Upload 上载</button>
     </form>
 
     <div class="progress-container" id="progressContainer">
@@ -427,6 +597,8 @@
 
     <div class="gallery-section">
       <h3 class="gallery-title">Live Gallery / 相册</h3>
+      <p class="gallery-help">Double-click or double-tap a photo to send love. Tap its filename to view.<br>双击照片送上爱心，点击文件名查看原图。</p>
+      <p id="galleryLikeStatus" class="gallery-like-status" role="status" hidden></p>
       <div class="gallery-toolbar">
         <div class="gallery-status">
           <p id="galleryRefreshStatus" class="gallery-refresh-status" role="status" aria-atomic="true">Loading gallery... / 正在加载相册...</p>
@@ -440,9 +612,21 @@
     </div>
   </div>
 
+  <dialog id="uploadErrorDialog" class="upload-error-dialog" aria-labelledby="uploadErrorTitle" aria-describedby="uploadErrorDescription">
+    <h2 id="uploadErrorTitle">Upload failed / 上传失败</h2>
+    <p id="uploadErrorDescription">Please try again. If your file is too large to upload here, please email us at
+      <a href="mailto:wailik.chengyee@gmail.com">wailik.chengyee@gmail.com</a>.<br>
+      请重试。如果文件过大无法上传，请发送邮件至上述电子邮箱。</p>
+    <div class="upload-error-actions">
+      <button type="button" id="dismissUploadError">Close / 关闭</button>
+      <button type="button" id="retryUploadBtn" autofocus>Try again / 重试</button>
+    </div>
+  </dialog>
+
   <script>
     const dropZone = document.getElementById("dropZone");
     const input = document.getElementById("myFile");
+    const submitButton = document.getElementById("submitBtn");
     const fileGridContainer = document.getElementById("fileGridContainer");
     const fileGrid = document.getElementById("fileGrid");
     const progressContainer = document.getElementById("progressContainer");
@@ -453,19 +637,25 @@
     const galleryRefreshButton = document.getElementById("refreshGalleryBtn");
     const galleryRefreshStatus = document.getElementById("galleryRefreshStatus");
     const galleryLastUpdated = document.getElementById("galleryLastUpdated");
+    const galleryLikeStatus = document.getElementById("galleryLikeStatus");
+    const uploadErrorDialog = document.getElementById("uploadErrorDialog");
     let galleryRequest = null;
+    let photoLikes = null;
+    let isUploading = false;
+    let progressHideTimeout;
 
     // IMPORTANT: Insert your generated Google Script deployment link here
     const webAppUrl = "https://script.google.com/macros/s/AKfycbyT1SIs15u_uIWHJzB9U2qnUZXXr_f_AFL4KehEKxxCliOeGapu9iZpKg-Wi7plaiYL/exec";
     let selectedFiles = [];
 
     window.addEventListener("DOMContentLoaded", () => {
+      initializePhotoLikes();
       fetchLiveCloudGallery();
     });
 
     galleryRefreshButton.addEventListener("click", () => fetchLiveCloudGallery());
 
-    dropZone.onclick = () => input.click();
+    dropZone.onclick = () => { if (!isUploading) input.click(); };
     input.onchange = () => { if (input.files.length > 0) addSelectedFiles(input.files); };
 
     function getMediaType(file) {
@@ -478,6 +668,7 @@
     }
 
     function addSelectedFiles(files) {
+      if (isUploading) return;
       const incomingFiles = Array.from(files);
       const mediaFiles = incomingFiles.filter(file => getMediaType(file));
       selectedFiles = [...selectedFiles, ...mediaFiles];
@@ -494,6 +685,7 @@
       const dataTransfer = new DataTransfer();
       selectedFiles.forEach(file => dataTransfer.items.add(file));
       input.files = dataTransfer.files;
+      submitButton.hidden = selectedFiles.length === 0;
       if (selectedFiles.length === 0) { fileGridContainer.style.display = "none"; fileGrid.innerHTML = ""; return; }
       fileGridContainer.style.display = "block";
       let html = "";
@@ -514,12 +706,110 @@
       fileGrid.innerHTML = html;
     }
 
-    function removeFile(index) { selectedFiles.splice(index, 1); syncAndRender(); }
+    function removeFile(index) { if (!isUploading) { selectedFiles.splice(index, 1); syncAndRender(); } }
     dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
     dropZone.addEventListener("dragleave", () => { dropZone.classList.remove("dragover"); });
     dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove("dragover"); if (e.dataTransfer.files.length > 0) addSelectedFiles(e.dataTransfer.files); });
 
-    // DYNAMIC ENGINE RENDERING CLICKABLE COVERS
+    function showLikeError(error, action) {
+      console.error("Photo likes:", error);
+      galleryLikeStatus.hidden = false;
+      galleryLikeStatus.textContent = action === "save"
+        ? "Couldn't save your like. Please try again. / 爱心保存失败，请重试。"
+        : "Couldn't load likes. Please reload the page. / 爱心加载失败，请重新加载页面。";
+    }
+
+    function initializePhotoLikes() {
+      try {
+        const app = firebase.initializeApp({
+          apiKey: "AIzaSyCvsH5D3MzqxnLwTYsmiKkwsjYP6-9f3RA",
+          authDomain: "seat-allocation-a1596.firebaseapp.com",
+          databaseURL: "https://seat-allocation-a1596-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "seat-allocation-a1596",
+          appId: "1:83260128140:web:dbbc442cf937007c6f74a9"
+        });
+        photoLikes = new PhotoLikes(app, renderPhotoLikes, showLikeError);
+        photoLikes.connect();
+      } catch (error) {
+        showLikeError(error, "load");
+      }
+    }
+
+    function renderPhotoLikes() {
+      liveGalleryGrid.querySelectorAll(".gallery-like-button").forEach(button => {
+        const state = photoLikes?.getState(button.dataset.fileId);
+        button.disabled = !state?.ready || state.pending;
+        button.setAttribute("aria-pressed", String(Boolean(state?.liked)));
+        button.setAttribute("aria-busy", String(Boolean(state?.pending)));
+        button.querySelector(".gallery-like-count").textContent = state?.ready ? state.count : "…";
+        const countLabel = state?.ready ? `${state.count} ${state.count === 1 ? "like" : "likes"}` : "Loading likes";
+        button.setAttribute("aria-label", `${state?.liked ? "Unlike" : "Like"} ${button.dataset.fileName} (${countLabel})`);
+      });
+    }
+
+    function animatePhotoLove(photo) {
+      photo.classList.remove("is-loving");
+      void photo.offsetWidth;
+      photo.classList.add("is-loving");
+    }
+
+    function lovePhoto(photo) {
+      if (!photoLikes?.ready) return;
+      galleryLikeStatus.hidden = true;
+      animatePhotoLove(photo);
+      // A double-click always adds love; repeated double-clicks never remove it.
+      photoLikes.setLiked(photo.dataset.photoId, true);
+    }
+
+    liveGalleryGrid.addEventListener("dblclick", event => {
+      const photo = event.target.closest(".gallery-photo");
+      if (!photo) return;
+      event.preventDefault();
+      lovePhoto(photo);
+    });
+
+    liveGalleryGrid.addEventListener("click", event => {
+      const button = event.target.closest(".gallery-like-button");
+      if (!button || button.disabled || !photoLikes?.ready) return;
+      const liked = !photoLikes.getState(button.dataset.fileId).liked;
+      galleryLikeStatus.hidden = true;
+      if (liked) animatePhotoLove(button.closest(".gallery-item-node").querySelector(".gallery-photo"));
+      photoLikes.setLiked(button.dataset.fileId, liked);
+    });
+
+    let touchStart = null;
+    let previousTap = null;
+    liveGalleryGrid.addEventListener("pointerdown", event => {
+      if (event.pointerType !== "touch" || !event.isPrimary) return;
+      const photo = event.target.closest(".gallery-photo");
+      touchStart = photo ? { photo, x: event.clientX, y: event.clientY, time: event.timeStamp } : null;
+    });
+    liveGalleryGrid.addEventListener("pointercancel", () => { touchStart = null; previousTap = null; });
+    liveGalleryGrid.addEventListener("pointerup", event => {
+      if (event.pointerType !== "touch" || !event.isPrimary || !touchStart) return;
+      const start = touchStart;
+      touchStart = null;
+      const photo = event.target.closest(".gallery-photo");
+      if (photo !== start.photo || event.timeStamp - start.time > 400 ||
+          Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12) {
+        previousTap = null;
+        return;
+      }
+      if (previousTap?.photo === photo && event.timeStamp - previousTap.time < 350 &&
+          Math.hypot(event.clientX - previousTap.x, event.clientY - previousTap.y) < 24) {
+        previousTap = null;
+        lovePhoto(photo);
+      } else {
+        previousTap = { photo, time: event.timeStamp, x: event.clientX, y: event.clientY };
+      }
+    });
+
+    function escapeGalleryHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      })[char]);
+    }
+
     function buildLiveGallery(items) {
       if (!items || items.length === 0) {
         liveGalleryGrid.innerHTML = `<div class="gallery-empty-state">No media uploaded yet. / 暂无相册媒体。</div>`;
@@ -527,28 +817,43 @@
       }
       let html = "";
       items.forEach(file => {
-        // Generates the exact destination format matching your link requirement
-        const targetDriveViewUrl = `https://drive.google.com/file/d/${file.id}/view`;
+        const fileId = escapeGalleryHtml(file.id);
+        const fileName = escapeGalleryHtml(file.name);
+        const fileUrl = escapeGalleryHtml(file.url);
+        const targetDriveViewUrl = `https://drive.google.com/file/d/${encodeURIComponent(file.id)}/view`;
 
         html += `
         <div class="gallery-item-node">
-            <!-- Wrapped inside an external redirect wrapper anchor -->
-            <a href="${targetDriveViewUrl}" target="_blank" class="gallery-card-link" title="Click to view file on Google Drive">
-                <div class="gallery-media-canvas">
-                    ${file.type === "video" ? `
+            ${file.type === "video" ? `
+                <a href="${targetDriveViewUrl}" target="_blank" rel="noopener noreferrer" class="gallery-card-link" title="View video on Google Drive">
+                  <div class="gallery-media-canvas">
                         <div class="video-thumbnail-container">
-                            <video src="${file.url}#t=0.5" preload="metadata"></video>
+                            <video src="${fileUrl}#t=0.5" preload="metadata" muted playsinline></video>
                             <div class="video-play-overlay">▶</div>
                         </div>
-                    ` : `
-                        <img src="${file.url}" loading="lazy">
-                    `}
+                  </div>
+                </a>
+            ` : `
+                <div class="gallery-card-link">
+                  <div class="gallery-media-canvas gallery-photo" data-photo-id="${fileId}" title="Double-click to like / 双击送上爱心">
+                    <img src="${fileUrl}" alt="${fileName}" loading="lazy" draggable="false">
+                    <span class="gallery-love-burst" aria-hidden="true">♥</span>
+                  </div>
                 </div>
-            </a>
-            <div class="gallery-media-label">${file.name}</div>
+            `}
+            <div class="gallery-media-caption">
+              <a href="${targetDriveViewUrl}" target="_blank" rel="noopener noreferrer" class="gallery-media-label" title="${fileName} — View on Google Drive">${fileName}</a>
+              ${file.type === "video" ? "" : `
+                <button type="button" class="gallery-like-button" data-file-id="${fileId}" data-file-name="${fileName}" aria-label="Like ${fileName}" aria-pressed="false" disabled>
+                  <svg class="gallery-like-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg>
+                  <span class="gallery-like-count" aria-hidden="true">…</span>
+                </button>
+              `}
+            </div>
         </div>`;
       });
       liveGalleryGrid.innerHTML = html;
+      renderPhotoLikes();
     }
 
     function fetchLiveCloudGallery() {
@@ -592,24 +897,38 @@
       return galleryRequest;
     }
 
-    document.getElementById("submitBtn").addEventListener("click", async function () {
+    submitButton.addEventListener("click", uploadSelectedFiles);
+    document.getElementById("dismissUploadError").addEventListener("click", () => uploadErrorDialog.close());
+    document.getElementById("retryUploadBtn").addEventListener("click", () => {
+      uploadErrorDialog.close();
+      uploadSelectedFiles();
+    });
+
+    async function uploadSelectedFiles() {
+      if (isUploading) return;
       if (selectedFiles.length == 0) { alert("Please select at least one file.\n 请选择至少一个文件。"); return; }
       if (window.location.protocol === 'file:') {
         alert("Security Alert: Please run this code using an active local server environment (like VS Code Live Server) instead of opening the local HTML file directly via double-click.");
         return;
       }
 
+      isUploading = true;
+      submitButton.disabled = true;
+      input.disabled = true;
+      clearTimeout(progressHideTimeout);
+      const uploadBatch = [...selectedFiles];
       statusLabel.style.color = "#4a3b32";
       statusLabel.innerHTML = "Uploading... / 正在上传...";
       progressContainer.style.display = "block";
       progressBar.style.width = "0%";
+      progressBar.style.backgroundColor = "#8c6f5e";
 
-      const totalFiles = selectedFiles.length;
+      const totalFiles = uploadBatch.length;
       let progressInterval;
 
       try {
         for (let i = 0; i < totalFiles; i++) {
-          const file = selectedFiles[i];
+          const file = uploadBatch[i];
           const base64Data = await getBase64(file);
           const cleanBase64 = base64Data.split(',')[1];
           const payload = { name: file.name, type: file.type, base64: cleanBase64 };
@@ -625,37 +944,58 @@
             }
           }, 150);
 
-          const response = await fetch(webAppUrl, { method: "POST", body: JSON.stringify(payload) });
-          clearInterval(progressInterval);
+          const controller = new AbortController();
+          const uploadTimeout = setTimeout(() => controller.abort(), 90000);
+          try {
+            const response = await fetch(webAppUrl, {
+              method: "POST", body: JSON.stringify(payload), signal: controller.signal
+            });
+            if (!response.ok) throw new Error(`Upload request failed: ${response.status}`);
+            const result = await response.json();
+            if (result.status !== "success") throw new Error(result.message);
+          } finally {
+            clearTimeout(uploadTimeout);
+            clearInterval(progressInterval);
+          }
 
-          if (!response.ok) throw new Error(`HTTP Endpoint connection failure: ${response.status}`);
-          const result = await response.json();
-          if (result.status !== "success") throw new Error(result.message);
-
+          // Retain only failed and unattempted files for the Try again button.
+          selectedFiles.splice(selectedFiles.indexOf(file), 1);
+          syncAndRender();
           progressBar.style.width = `${((i + 1) / totalFiles) * 100}%`;
         }
 
         statusLabel.style.color = "#8c6f5e";
         statusLabel.innerHTML = "Synchronizing live albums... / 正在更新同步...";
-        selectedFiles = [];
-        syncAndRender();
-
-        setTimeout(async () => {
-          const galleryUpdated = await fetchLiveCloudGallery();
-          statusLabel.style.color = "#5c6e58";
-          statusLabel.textContent = galleryUpdated
-            ? "✅ Gallery updated successfully! / 上传并同步成功！"
-            : "✅ Uploaded successfully. Refresh the gallery to see your files. / 上传成功，请刷新相册查看。";
-          setTimeout(() => { progressContainer.style.display = "none"; }, 1500);
-        }, 1000);
+        const galleryUpdated = await fetchLiveCloudGallery();
+        statusLabel.style.color = "#5c6e58";
+        statusLabel.textContent = galleryUpdated
+          ? "✅ Gallery updated successfully! / 上传并同步成功！"
+          : "✅ Uploaded successfully. Refresh the gallery to see your files. / 上传成功，请刷新相册查看。";
+        progressHideTimeout = setTimeout(() => { progressContainer.style.display = "none"; }, 1500);
 
       } catch (err) {
         if (progressInterval) clearInterval(progressInterval);
         console.error(err);
         statusLabel.style.color = "#c94b4b";
-        statusLabel.innerHTML = `❌ Error: ${err.message || "Upload configuration broken."}`;
+        statusLabel.textContent = "Upload failed. Please try again. / 上传失败，请重试。";
         progressBar.style.backgroundColor = "#c94b4b";
+        if (!uploadErrorDialog.open) uploadErrorDialog.showModal();
+      } finally {
+        isUploading = false;
+        submitButton.disabled = false;
+        input.disabled = false;
       }
+    }
+
+    // Acknowledge only the embedding page, so it can detect an unavailable iframe.
+    const embeddingOrigin = document.referrer ? new URL(document.referrer).origin : null;
+    const embeddingRequest = new URLSearchParams(window.location.search).get("embedRequest");
+    window.addEventListener("message", event => {
+      if (window.parent === window || event.source !== window.parent || event.origin !== embeddingOrigin ||
+          event.data?.type !== "wedding-uploader:ping" || String(event.data.requestId) !== embeddingRequest) return;
+      window.parent.postMessage({
+        type: "wedding-uploader:ready", requestId: event.data.requestId
+      }, event.origin);
     });
 
     function getBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); }); }
