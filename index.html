@@ -989,12 +989,24 @@
     // Acknowledge only the embedding page, so it can detect an unavailable iframe.
     const embeddingOrigin = document.referrer ? new URL(document.referrer).origin : null;
     const embeddingRequest = new URLSearchParams(window.location.search).get("embedRequest");
+    let lastGalleryRefreshRequest = null;
     window.addEventListener("message", event => {
+      if (window.parent !== window && event.source === window.parent &&
+          (!embeddingOrigin || event.origin === embeddingOrigin) && event.data?.type === "wedding-uploader:refresh-gallery") {
+        const requestId = event.data.requestId;
+        if (!Number.isSafeInteger(requestId) || requestId < 1 || requestId <= lastGalleryRefreshRequest) return;
+        lastGalleryRefreshRequest = requestId;
+        fetchLiveCloudGallery();
+        return;
+      }
       if (window.parent === window || event.source !== window.parent || event.origin !== embeddingOrigin ||
           event.data?.type !== "wedding-uploader:ping" || String(event.data.requestId) !== embeddingRequest) return;
       window.parent.postMessage({
         type: "wedding-uploader:ready", requestId: event.data.requestId
       }, event.origin);
+    });
+    window.addEventListener("pageshow", event => {
+      if (event.persisted) fetchLiveCloudGallery();
     });
 
     function getBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.readAsDataURL(file); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); }); }
